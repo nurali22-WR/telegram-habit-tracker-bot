@@ -28,3 +28,35 @@ def add_habit(user_id, name):
 
     conn.commit()
     conn.close()
+
+def get_habits(user_id):
+    conn = sqlite3.connect("habits.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT id, name
+    FROM habits
+    WHERE user_id = ?
+    """,
+    (user_id,)
+    )
+    
+    habits = cursor.fetchall()
+
+    conn.close()
+    return habits
+
+def update_habit(name, id, user_id):
+    conn = sqlite3.connect("habits.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE habits
+    SET name = ? 
+    WHERE id = ? AND user_id = ?
+    """,
+    (name, id, user_id)
+    )
+
+    conn.commit()
+    conn.close()
