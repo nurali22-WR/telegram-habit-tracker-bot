@@ -1,4 +1,4 @@
-from database import add_habit, get_habits, update_habit
+from database import add_habit, get_habits, update_habit, delete_habit
 
 import telebot
 
@@ -29,7 +29,7 @@ def register_handlers(bot):
 
         add_habit(user_id, name)
     
-        bot.send_message(message.chat.id, "Готово!")
+        bot.send_message(message.chat.id, "Готово! Ваша привычка успешно сохранилась! Список привычек /list")
 
     @bot.message_handler(commands=['list'])
     def list(message):
@@ -45,7 +45,7 @@ def register_handlers(bot):
 
     @bot.message_handler(commands=['update'])
     def update(message):
-        bot.send_message(message.chat.id, "Введите номер привычки:")
+        bot.send_message(message.chat.id, "✏️ Введите номер привычки:")
         bot.register_next_step_handler(message, process_edit_habit)
 
     def process_edit_habit(message):
@@ -59,5 +59,17 @@ def register_handlers(bot):
 
         update_habit(new_name, id, user_id)
 
-        bot.send_message(message.chat.id, "Готово!")
+        bot.send_message(message.chat.id, "Готово! Название вашей привычки обновилось! Список привычек /list")
     
+    @bot.message_handler(commands=['delete'])
+    def delete(message):
+        bot.send_message(message.chat.id, "✏️ Введите номер привычки:")
+        bot.register_next_step_handler(message, process_delete_habit)
+
+    def process_delete_habit(message):
+        id = message.text
+        user_id = message.from_user.id
+
+        delete_habit(id, user_id)
+
+        bot.send_message(message.chat.id, "Готово! Ваша привычка удалена! Список привычек /list")

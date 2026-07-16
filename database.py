@@ -60,3 +60,17 @@ def update_habit(name, id, user_id):
 
     conn.commit()
     conn.close()
+
+def delete_habit(id, user_id):
+    conn = sqlite3.connect("habits.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    DELETE FROM habits
+    WHERE id = ? AND user_id = ?
+    """,
+    (id, user_id)
+    )
+
+    conn.commit()
+    conn.close()
