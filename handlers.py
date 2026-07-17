@@ -1,4 +1,6 @@
-from database import add_habit, get_habits, update_habit, delete_habit
+from database import add_habit, get_habits, update_habit, delete_habit, complete_habit
+from telebot import types
+from datetime import datetime
 
 import telebot
 
@@ -16,7 +18,8 @@ def register_handlers(bot):
         "/add - добавить привычку\n"
         "/list - просмотр привычек\n"
         "/update - обновить название привычки\n"
-        "/delete - удалить привычку")
+        "/delete - удалить привычку\n"
+        "/complete_habit - отметить выполнение привычки")
 
     @bot.message_handler(commands=['add'])
     def add(message):
@@ -29,10 +32,10 @@ def register_handlers(bot):
 
         add_habit(user_id, name)
     
-        bot.send_message(message.chat.id, "Готово! Ваша привычка успешно сохранилась! Список привычек /list")
+        bot.send_message(message.chat.id, "✅ Готово! Ваша привычка успешно сохранилась! Список привычек /list")
 
     @bot.message_handler(commands=['list'])
-    def list(message):
+    def show_list(message):
         user_id = message.from_user.id
         habits = get_habits(user_id)
         
@@ -41,7 +44,7 @@ def register_handlers(bot):
         for habit in habits:
             habits_list.append(f"{habit[0]}. {habit[1]}")
 
-        bot.send_message(message.chat.id, "Ваши привычки:\n" + '\n'.join(habits_list))
+        bot.send_message(message.chat.id, "📋 Ваши привычки:\n" + '\n'.join(habits_list))
 
     @bot.message_handler(commands=['update'])
     def update(message):
@@ -59,7 +62,7 @@ def register_handlers(bot):
 
         update_habit(new_name, id, user_id)
 
-        bot.send_message(message.chat.id, "Готово! Название вашей привычки обновилось! Список привычек /list")
+        bot.send_message(message.chat.id, "✅ Готово! Название вашей привычки обновилось! Список привычек /list")
     
     @bot.message_handler(commands=['delete'])
     def delete(message):
@@ -72,4 +75,33 @@ def register_handlers(bot):
 
         delete_habit(id, user_id)
 
-        bot.send_message(message.chat.id, "Готово! Ваша привычка удалена! Список привычек /list")
+        bot.send_message(message.chat.id, "✅ Готово! Ваша привычка удалена! Список привычек /list")
+
+    @bot.message_handler(commands=['complete_habit'])
+    def complete(message):
+        user_id = message.from_user.id
+        habits = get_habits(user_id)
+
+        markup = types.InlineKeyboardMarkup()
+
+        for habit in habits:
+            markup.add(types.InlineKeyboardButton(f'{habit[1]}', callback_data=f'complete_{habit[0]}'))
+
+        bot.send_message(message.chat.id, "📋 Ваши привычки: ", reply_markup=markup)
+
+
+    "======================================================================================================"
+    "callback.data"
+    @bot.callback_query_handler(func=lambda call:True)
+    def callback(call):
+            if call.data == 'help':
+                bot.answer_callback_query(
+                    call.id,
+                    text="Список команд открыт!"
+            )
+            elif call.data.startswith('complete_'):
+                habit_id = call.data[-1]
+                completed_at = datetime.now().strftime("%Y-%m-%d")
+                complete_habit(habit_id, completed_at)
+                bot.send_message(call.message.chat.id, "✅ Готово! Ваша привычка отмечена!")
+

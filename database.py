@@ -1,6 +1,6 @@
 import sqlite3
 
-def create_db():
+def create_habits_db():
     conn = sqlite3.connect("habits.db")
     cursor = conn.cursor()
 
@@ -14,6 +14,24 @@ def create_db():
 
     conn.commit()
     conn.close()
+
+def create_habit_logs_db():
+    conn = sqlite3.connect("habit_logs.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS habit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            habit_id INTEGER,
+            completed_at TEXT,
+            FOREIGN KEY (habit_id) REFERENCES habits(id)
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
 
 def add_habit(user_id, name):
     conn = sqlite3.connect("habits.db")
@@ -70,6 +88,20 @@ def delete_habit(id, user_id):
     WHERE id = ? AND user_id = ?
     """,
     (id, user_id)
+    )
+
+    conn.commit()
+    conn.close()
+
+def complete_habit(habit_id, completed_at):
+    conn = sqlite3.connect("habit_logs.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO habit_logs (habit_id, completed_at) 
+    VALUES (?, ?);
+    """,
+    (habit_id, completed_at)
     )
 
     conn.commit()
