@@ -106,3 +106,50 @@ def complete_habit(habit_id, completed_at):
 
     conn.commit()
     conn.close()
+
+def is_habit_completed_today(habit_id, completed_at):
+    conn = sqlite3.connect("habit_logs.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT completed_at
+    FROM habit_logs
+    WHERE habit_id = ? AND completed_at = ?
+    """,
+    (habit_id, completed_at)
+    )
+    
+    habit_completed_date = cursor.fetchone()
+
+    conn.close()
+    return habit_completed_date
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def delete_habit_logs():
+    conn = sqlite3.connect("habit_logs.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    DELETE FROM habit_logs
+    WHERE id = 4
+    """,
+    )
+
+    conn.commit()
+    conn.close()
+delete_habit_logs()

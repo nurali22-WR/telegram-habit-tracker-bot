@@ -1,4 +1,4 @@
-from database import add_habit, get_habits, update_habit, delete_habit, complete_habit
+from database import add_habit, get_habits, update_habit, delete_habit, complete_habit, is_habit_completed_today
 from telebot import types
 from datetime import datetime
 
@@ -100,8 +100,13 @@ def register_handlers(bot):
                     text="Список команд открыт!"
             )
             elif call.data.startswith('complete_'):
-                habit_id = call.data[-1]
+                habit_id = int(call.data.split('_')[1])
                 completed_at = datetime.now().strftime("%Y-%m-%d")
-                complete_habit(habit_id, completed_at)
-                bot.send_message(call.message.chat.id, "✅ Готово! Ваша привычка отмечена!")
+                habit_completed_date = is_habit_completed_today(habit_id, completed_at)
+
+                if habit_completed_date is not None:
+                    bot.send_message(call.message.chat.id, "Привычка уже отмечена!")
+                else:
+                    complete_habit(habit_id, completed_at)
+                    bot.send_message(call.message.chat.id, "✅ Готово! Ваша привычка отмечена!")
 
