@@ -89,6 +89,23 @@ def register_handlers(bot):
 
         bot.send_message(message.chat.id, "📋 Ваши привычки: ", reply_markup=markup)
 
+    @bot.message_handler(commands=['today'])
+    def today(message):
+        user_id = message.from_user.id
+        habits = get_habits(user_id)
+        today_date = datetime.now().strftime("%Y-%m-%d")
+
+        today_list = []
+
+        for habit in habits:
+            habit_completed_date = is_habit_completed_today(habit[0], today_date)
+            if habit_completed_date is None:
+                today_list.append(f"❌ {habit[0]}. {habit[1]}")
+            else:
+                today_list.append(f"✅ {habit[0]}. {habit[1]}")
+        
+        bot.send_message(message.chat.id, "📋 Выполненные привычки за сегодня:\n" + '\n'.join(today_list))
+
 
     "======================================================================================================"
     "callback.data"
@@ -101,12 +118,12 @@ def register_handlers(bot):
             )
             elif call.data.startswith('complete_'):
                 habit_id = int(call.data.split('_')[1])
-                completed_at = datetime.now().strftime("%Y-%m-%d")
-                habit_completed_date = is_habit_completed_today(habit_id, completed_at)
+                today_date = datetime.now().strftime("%Y-%m-%d")
+                habit_completed_date = is_habit_completed_today(habit_id, today_date)
 
                 if habit_completed_date is not None:
                     bot.send_message(call.message.chat.id, "Привычка уже отмечена!")
                 else:
-                    complete_habit(habit_id, completed_at)
+                    complete_habit(habit_id, today_date)
                     bot.send_message(call.message.chat.id, "✅ Готово! Ваша привычка отмечена!")
 
