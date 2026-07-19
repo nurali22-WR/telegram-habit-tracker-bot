@@ -124,7 +124,20 @@ def is_habit_completed_today(habit_id, completed_at):
     conn.close()
     return habit_completed_date
 
+def get_habit_logs():
+    conn = sqlite3.connect("habit_logs.db")
+    cursor = conn.cursor()
 
+    cursor.execute("""
+    SELECT habit_id, completed_at
+    FROM habit_logs
+    """
+    )
+    
+    habit_logs = cursor.fetchall()
+    
+    conn.close()
+    return habit_logs
 
 
 

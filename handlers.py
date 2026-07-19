@@ -1,4 +1,4 @@
-from database import add_habit, get_habits, update_habit, delete_habit, complete_habit, is_habit_completed_today
+from database import add_habit, get_habits, update_habit, delete_habit, complete_habit, is_habit_completed_today, get_habit_logs
 from telebot import types
 from datetime import datetime
 
@@ -19,7 +19,9 @@ def register_handlers(bot):
         "/list - просмотр привычек\n"
         "/update - обновить название привычки\n"
         "/delete - удалить привычку\n"
-        "/complete_habit - отметить выполнение привычки")
+        "/complete_habit - отметить выполнение привычки\n"
+        "/today - выполненные привычки за сегодня\n"
+        "/stats - статистика")
 
     @bot.message_handler(commands=['add'])
     def add(message):
@@ -99,13 +101,49 @@ def register_handlers(bot):
 
         for habit in habits:
             habit_completed_date = is_habit_completed_today(habit[0], today_date)
-            if habit_completed_date is None:
-                today_list.append(f"❌ {habit[0]}. {habit[1]}")
-            else:
+            if habit_completed_date is not None:
                 today_list.append(f"✅ {habit[0]}. {habit[1]}")
+            else:
+                today_list.append(f"❌ {habit[0]}. {habit[1]}")
         
-        bot.send_message(message.chat.id, "📋 Выполненные привычки за сегодня:\n" + '\n'.join(today_list))
+        bot.send_message(message.chat.id, "📋 Выполненные привычки за сегодня:\n\n" + '\n'.join(today_list))
 
+    @bot.message_handler(commands=['stats'])
+    def stats(message):
+        stats_list = []
+
+        user_id = message.from_user.id
+        habits = get_habits(user_id)
+        today_date = datetime.now().strftime("%Y-%m-%d")
+
+        "Количество всех привычек"
+        total_habits = len(habits)
+
+        "Количество выполненных привычек за сегодня"
+        total_completed_today = 0
+        for habit in habits:
+            habit_completed_date = is_habit_completed_today(habit[0], today_date)
+            if habit_completed_date is not None:
+                total_completed_today += 1
+        
+        "Процент выполнения привычек"
+        completed_habits_percent = 0
+        if total_habits == 0:
+            completed_habits_percent = 0
+        else:
+            completed_habits_percent = round((total_completed_today / total_habits) * 100)
+        
+        "Количество отметок"
+        total_marks = len(get_habit_logs())
+
+        stats_list.append(f"📋 Всего привычек: {total_habits}")
+        stats_list.append(f"✅ Выполнено сегодня: {total_completed_today}")
+        stats_list.append(f"❌ Осталось: {total_habits - total_completed_today}")
+        stats_list.append(f"📈 Выполнение: {completed_habits_percent}%")
+        stats_list.append(f"🏆 Всего отметок: {total_marks}")
+
+        bot.send_message(message.chat.id, f"📊 Ваша статистика\n\n" + '\n'.join(stats_list))
+            
 
     "======================================================================================================"
     "callback.data"
