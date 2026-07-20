@@ -139,30 +139,37 @@ def get_habit_logs():
     conn.close()
     return habit_logs
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def delete_habit_logs():
+def get_completed_dates(habit_id):
     conn = sqlite3.connect("habit_logs.db")
     cursor = conn.cursor()
 
     cursor.execute("""
-    DELETE FROM habit_logs
-    WHERE id = 4
+    SELECT completed_at
+    FROM habit_logs
+    WHERE habit_id = ?
+    ORDER BY completed_at DESC
     """,
+    (habit_id,)
     )
-
-    conn.commit()
+    
+    completed_dates = cursor.fetchall()
+    
     conn.close()
-delete_habit_logs()
+    return completed_dates
+
+def get_habit_name(habit_id):
+    conn = sqlite3.connect("habits.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT name
+    FROM habits
+    WHERE id = ?
+    """,
+    (habit_id,)
+    )
+    
+    habit_name = cursor.fetchone()
+
+    conn.close()
+    return habit_name

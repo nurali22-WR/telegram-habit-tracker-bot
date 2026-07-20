@@ -1,7 +1,7 @@
-from database import add_habit, get_habits, update_habit, delete_habit, complete_habit, is_habit_completed_today, get_habit_logs
+from database import add_habit, get_habits, update_habit, delete_habit, complete_habit, is_habit_completed_today, get_habit_logs, get_completed_dates, get_habit_name
 from telebot import types
-from datetime import datetime
 
+import datetime
 import telebot
 
 def register_handlers(bot):
@@ -21,8 +21,10 @@ def register_handlers(bot):
         "/delete - удалить привычку\n"
         "/complete_habit - отметить выполнение привычки\n"
         "/today - выполненные привычки за сегодня\n"
-        "/stats - статистика")
+        "/stats - статистика\n"
+        "/streak - текущая серия дней подряд")
 
+    "Добавить привычку"
     @bot.message_handler(commands=['add'])
     def add(message):
         bot.send_message(message.chat.id, "Введите привычку: ")
@@ -36,6 +38,7 @@ def register_handlers(bot):
     
         bot.send_message(message.chat.id, "✅ Готово! Ваша привычка успешно сохранилась! Список привычек /list")
 
+    "Список привычек"
     @bot.message_handler(commands=['list'])
     def show_list(message):
         user_id = message.from_user.id
@@ -48,6 +51,7 @@ def register_handlers(bot):
 
         bot.send_message(message.chat.id, "📋 Ваши привычки:\n" + '\n'.join(habits_list))
 
+    "Редактиирование привычки"
     @bot.message_handler(commands=['update'])
     def update(message):
         bot.send_message(message.chat.id, "✏️ Введите номер привычки:")
@@ -66,11 +70,11 @@ def register_handlers(bot):
 
         bot.send_message(message.chat.id, "✅ Готово! Название вашей привычки обновилось! Список привычек /list")
     
+    "Удалить привычку"
     @bot.message_handler(commands=['delete'])
     def delete(message):
         bot.send_message(message.chat.id, "✏️ Введите номер привычки:")
         bot.register_next_step_handler(message, process_delete_habit)
-
     def process_delete_habit(message):
         id = message.text
         user_id = message.from_user.id
@@ -79,6 +83,7 @@ def register_handlers(bot):
 
         bot.send_message(message.chat.id, "✅ Готово! Ваша привычка удалена! Список привычек /list")
 
+    "Отметить привычку"
     @bot.message_handler(commands=['complete_habit'])
     def complete(message):
         user_id = message.from_user.id
@@ -91,11 +96,12 @@ def register_handlers(bot):
 
         bot.send_message(message.chat.id, "📋 Ваши привычки: ", reply_markup=markup)
 
+    "Статистика за день"
     @bot.message_handler(commands=['today'])
     def today(message):
         user_id = message.from_user.id
         habits = get_habits(user_id)
-        today_date = datetime.now().strftime("%Y-%m-%d")
+        today_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
         today_list = []
 
@@ -108,13 +114,14 @@ def register_handlers(bot):
         
         bot.send_message(message.chat.id, "📋 Выполненные привычки за сегодня:\n\n" + '\n'.join(today_list))
 
+    "Общая статистика"
     @bot.message_handler(commands=['stats'])
     def stats(message):
         stats_list = []
 
         user_id = message.from_user.id
         habits = get_habits(user_id)
-        today_date = datetime.now().strftime("%Y-%m-%d")
+        today_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
         "Количество всех привычек"
         total_habits = len(habits)
@@ -143,7 +150,19 @@ def register_handlers(bot):
         stats_list.append(f"🏆 Всего отметок: {total_marks}")
 
         bot.send_message(message.chat.id, f"📊 Ваша статистика\n\n" + '\n'.join(stats_list))
-            
+        
+    "Серия дней!"
+    @bot.message_handler(commands=['streak'])
+    def streak(message):
+        user_id = message.from_user.id
+        habits = get_habits(user_id)
+
+        markup = types.InlineKeyboardMarkup()
+
+        for habit in habits:
+            markup.add(types.InlineKeyboardButton(f'{habit[1]}', callback_data=f'streak_{habit[0]}'))
+
+        bot.send_message(message.chat.id, "🔥 Посмотреть серию", reply_markup=markup)
 
     "======================================================================================================"
     "callback.data"
@@ -153,15 +172,58 @@ def register_handlers(bot):
                 bot.answer_callback_query(
                     call.id,
                     text="Список команд открыт!"
-            )
+                )
             elif call.data.startswith('complete_'):
                 habit_id = int(call.data.split('_')[1])
-                today_date = datetime.now().strftime("%Y-%m-%d")
+                today_date = datetime.datetime.now().strftime("%Y-%m-%d")
                 habit_completed_date = is_habit_completed_today(habit_id, today_date)
 
                 if habit_completed_date is not None:
                     bot.send_message(call.message.chat.id, "Привычка уже отмечена!")
+                    bot.answer_callback_query(
+                        call.id,
+                        text="Команда выполнена!"
+                    )
                 else:
                     complete_habit(habit_id, today_date)
                     bot.send_message(call.message.chat.id, "✅ Готово! Ваша привычка отмечена!")
+                    bot.answer_callback_query(
+                        call.id,
+                        text="Команда выполнена!"
+                    )
+
+            elif call.data.startswith('streak_'):
+                habit_id = int(call.data.split('_')[1])
+                today_date = datetime.datetime.now().date()
+                dates_list = []
+                completed_dates = get_completed_dates(habit_id)
+
+                for date in completed_dates:
+                    dates_list.append(date[0])
+
+                streak = 0
+                for i in range(len(dates_list)):
+                    habit_date = datetime.datetime.strptime(dates_list[i], "%Y-%m-%d").date()
+                    if today_date - datetime.timedelta(days=i) == habit_date:
+                        streak += 1
+                    else:
+                        break
+                    
+                streak_message = ""
+                if streak == 1:
+                    streak_message = "день"
+                elif streak > 1 and streak < 5:
+                    streak_message = "дня"
+                else:
+                    streak_message = "дней"
+
+                habit_name = get_habit_name(habit_id)
+
+                bot.send_message(call.message.chat.id, f"Привычка: {habit_name[0]}\n🔥 Текущая серия: {streak} " + streak_message)
+                bot.answer_callback_query(
+                    call.id,
+                    text="Команда выполнена!"
+                )
+
+                
 
