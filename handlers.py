@@ -7,14 +7,18 @@ import telebot
 def register_handlers(bot):
     @bot.message_handler(commands=['start'])
     def start(message):
+        show_start(message.chat.id)
+
+    def show_start(chat_id):
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton(f'❓ Помощь', callback_data='help'))
-        bot.send_message(message.chat.id, "👋 Привет! Я трекер привычек, " \
+        bot.send_message(chat_id, "👋 Привет! Я трекер привычек, " \
         "который поможет тебе выработать полезные привычки.", reply_markup=markup)
 
     @bot.message_handler(commands=['help'])
     def help(message):
         show_help(message.chat.id)
+
     def show_help(chat_id):
         commands = {
             'start': "🏠 Главное меню",
@@ -40,6 +44,7 @@ def register_handlers(bot):
     def add(message):
         bot.send_message(message.chat.id, "✏️ Введите привычку: ")
         bot.register_next_step_handler(message, save_habit)
+
     def save_habit(message):
         user_id = message.from_user.id
         name = message.text
@@ -52,26 +57,34 @@ def register_handlers(bot):
     @bot.message_handler(commands=['list'])
     def list(message):
         show_list(message.chat.id, message.from_user.id)
+
     def show_list(chat_id, user_id):
         habits = get_habits(user_id)
         
         habits_list = []
-        
+
+        i = 0
         for habit in habits:
-            habits_list.append(f"{habit[0]}. {habit[1]}")
+            i += 1
+            habits_list.append(f"{i}. {habit[1]}")
 
         bot.send_message(chat_id, "📋 Ваши привычки:\n\n" + '\n'.join(habits_list))
 
+
+
+    def show_habits(text, user_id):
+        habits = get_habits(user_id)
+        markup = types.InlineKeyboardMarkup()
+        for habit in habits:
+            markup.add(types.InlineKeyboardButton(f'{habit[1]}', callback_data=f'{text}_{habit[0]}'))
+        return markup
+    
     "Редактирование привычки"
     @bot.message_handler(commands=['update'])
     def update(message):
         show_update(message.chat.id, message.from_user.id)
     def show_update(chat_id, user_id):
-        habits = get_habits(user_id)
-        markup = types.InlineKeyboardMarkup()
-        for habit in habits:
-            markup.add(types.InlineKeyboardButton(f'{habit[1]}', callback_data=f'update_{habit[0]}'))
-
+        markup = show_habits('update', user_id)
         bot.send_message(chat_id, "📋 Ваши привычки: ", reply_markup=markup)
     def edit_habit(message, id):
         new_name = message.text
@@ -85,13 +98,11 @@ def register_handlers(bot):
     @bot.message_handler(commands=['delete'])
     def delete(message):
         show_delete(message.chat.id, message.from_user.id)
-    def show_delete(chat_id, user_id):
-        habits = get_habits(user_id)
-        markup = types.InlineKeyboardMarkup()
-        for habit in habits:
-            markup.add(types.InlineKeyboardButton(f'{habit[1]}', callback_data=f'delete_{habit[0]}'))
 
+    def show_delete(chat_id, user_id):
+        markup = show_habits('delete', user_id)
         bot.send_message(chat_id, "🗑️ Удалить привычку", reply_markup=markup)
+
     def process_delete_habit(message, id, user_id):
         habit_name = get_habit_name(id)
         delete_habit(id, user_id)
@@ -101,20 +112,16 @@ def register_handlers(bot):
     @bot.message_handler(commands=['complete_habit'])
     def complete(message):
         show_complete(message.chat.id, message.from_user.id)
+
     def show_complete(chat_id, user_id):
-        habits = get_habits(user_id)
-
-        markup = types.InlineKeyboardMarkup()
-
-        for habit in habits:
-            markup.add(types.InlineKeyboardButton(f'{habit[1]}', callback_data=f'complete_{habit[0]}'))
-
+        markup = show_habits('complete', user_id)
         bot.send_message(chat_id, "📋 Ваши привычки: ", reply_markup=markup)
 
     "Статистика за день"
     @bot.message_handler(commands=['today'])
     def today(message):
         show_today(message.chat.id, message.from_user.id)
+
     def show_today(chat_id, user_id):
         habits = get_habits(user_id)
         today_date = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -134,6 +141,7 @@ def register_handlers(bot):
     @bot.message_handler(commands=['stats'])
     def stats(message):
         show_stats(message.chat.id, message.from_user.id)
+
     def show_stats(chat_id, user_id):
         stats_list = []
         
@@ -167,26 +175,24 @@ def register_handlers(bot):
         stats_list.append(f"🏆 Всего отметок: {total_marks}")
 
         bot.send_message(chat_id, f"📊 Ваша статистика\n\n" + '\n'.join(stats_list))
-        
+
     "Серия дней!"
     @bot.message_handler(commands=['streak'])
     def streak(message):
         show_streak(message.chat.id, message.from_user.id)
+
     def show_streak(chat_id, user_id):
-        habits = get_habits(user_id)
-
-        markup = types.InlineKeyboardMarkup()
-
-        for habit in habits:
-            markup.add(types.InlineKeyboardButton(f'{habit[1]}', callback_data=f'streak_{habit[0]}'))
-
+        markup = show_habits('streak', user_id)
         bot.send_message(chat_id, "🔥 Посмотреть серию", reply_markup=markup)
 
     "======================================================================================================"
     "callback.data"
     @bot.callback_query_handler(func=lambda call:True)
     def callback(call):
-            if call.data == 'help':
+            if call.data == 'start':
+                show_start(call.message.chat.id)
+
+            elif call.data == 'help':
                 show_help(call.message.chat.id)
                 bot.answer_callback_query(
                     call.id,
